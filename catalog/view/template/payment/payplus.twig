@@ -1,0 +1,63 @@
+{% if sandbox_mode %}
+<div class="alert alert-danger alert-dismissible"><i class="fa fa-exclamation-circle"></i> {{ text_sandbox }}</div>
+{% endif %}
+
+<form class="form-horizontal" id="form_iframe" name="payplusiframe" action="{{ action }}" method="POST" {% if display_mode == "iframe" %}
+	target="payplusiframe" {% endif %} onsubmit="return payplus_submitPaymentForm();">
+{% if store_cards == 1 and is_logged == 1 %}
+<fieldset id="showChooseCards">
+	<h2>{{ text_card_details }}</h2>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">{{ text_card }}</label>
+		<div class="col-sm-8">
+			<select class="form-control selected_card" name="selected_card">
+				<optgroup label="{{ text_card_details }}">
+					<option value="save">{{ text_new_card }}</option>
+					<option value="skip">{{ text_not_save }}</option>
+				</optgroup>
+				<optgroup label="{{ text_saved_card }}">
+					{% for card in cards %}
+						<option value="{{ card.payplus_card_id }}">{% if card.brand_name != 'pl' %} {{ card.brand_name|capitalize }} {% endif %} **** **** **** {{ card.last_four }} ({{ card.exp_month }}/{{ card.exp_year }})</option>
+					{% endfor %}
+				</optgroup>
+			</select>
+		</div>
+		<div class="col-sm-2 text-right">
+			<input type="submit" value="{{ button_confirm }}" class="btn btn-primary" />
+		</div>
+	</div>
+</fieldset>
+{% else %}
+<div class="text-right" id="payplus_justButton">
+	<input type="hidden" name="selected_card" value="skip" />
+	<input type="submit" value="{{ button_confirm }}" class="btn btn-primary" />
+</div>
+{% endif %}
+</form>
+
+{% if display_mode == "iframe" %}
+	<iframe  allowpaymentrequest  name="payplusiframe" id="payplusiframe" style="width: 100%; height: {{ iframe_height }}px; border: 0; display: none;"></iframe>
+{% endif %}
+
+{% if display_mode != "iframe" and store_cards == 0 and is_logged == 0 %}
+	<script>document.payplusiframe.submit();</script>
+{% endif %}
+
+<div id="please_wait" class="form-group text-center" style="display: none;">
+	<iframe src="catalog/view/theme/default/image/loader.html" frameborder="0" width="150" height="150"></iframe><br />
+	<h3>{{ text_please_wait }}</h3>
+</div>
+
+<script type="text/javascript">
+function payplus_submitPaymentForm() {
+	$("#showChooseCards").slideUp();
+	$("#payplus_justButton").slideUp();
+	$("#payplusiframe").slideDown();
+	if ($.isNumeric($(".selected_card option:selected").val())) {
+		$("#form_iframe").removeAttr("target");
+		$("#payplusiframe").remove();
+		$("#please_wait").show();
+		}
+	payplus_save_card_form.submit();
+	}
+</script>

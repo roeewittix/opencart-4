@@ -1,0 +1,239 @@
+<div id="payplus_gateway_top"></div>
+{% if tab_selected == "Confirmed" %}
+	<div class="alert-alternative alert-success">
+		<button type="button" class="close" onclick='$(".alert-alternative").hide();'>&times;</button>
+		<i class="fa fa-exclamation-circle"></i> {{ text_pp_transaction_successful }}
+	</div>
+	{% elseif tab_selected == "Failed" %}
+	<div class="alert-alternative alert-danger">
+		<button type="button" class="close" onclick='$(".alert-alternative").hide();'>&times;</button>
+		<i class="fa fa-exclamation-circle"></i> {{ text_pp_transaction_error }}
+	</div>
+	{% else %}
+
+	{% endif %}
+
+<fieldset>
+<div class="col-lg-3 col-md-3 col-sm-6"><div class="tile tile-primary" style="background-color: #34aa54;">
+	<div class="tile-heading">{{ stats_order_amount }} <span class="pull-right"></span></div>
+  		<div class="tile-body">
+		  	<i class="fa fa-shopping-cart"></i>
+    		<h2 class="pull-right">{{ payplus_order_info.total }} {{payplus_order_info.currency_code}}</h2>
+  		</div>
+	</div>
+</div>
+<div class="col-lg-3 col-md-3 col-sm-6"><div class="tile tile-primary" style="background-color: #34aa54;">
+	<div class="tile-heading">{{ stats_charged_amount }} <span class="pull-right"></span></div>
+  		<div class="tile-body">
+		  	<i class="fa fa-credit-card"></i>
+    		<h2 class="pull-right">{{ payplus_order_info.stats.total_charges }} {{payplus_order_info.currency_code}}</h2>
+  		</div>
+	</div>
+</div>
+<div class="col-lg-3 col-md-3 col-sm-6"><div class="tile tile-primary" style="background-color: #34aa54;">
+	<div class="tile-heading">{{ stats_refund_amount }} <span class="pull-right"></span></div>
+  		<div class="tile-body">
+		  	<i class="fa fa-credit-card"></i>
+    		<h2 class="pull-right">{{ payplus_order_info.stats.total_refunds }} {{payplus_order_info.currency_code}}</h2>
+  		</div>
+	</div>
+</div>
+<div class="col-lg-3 col-md-3 col-sm-6">
+	<div class="panel panel-default">
+		<div class="panel-heading">
+			<h3 class="panel-title"><i class="fa fa-info-circle"></i> {{ stats_info }}</h3>
+		</div>
+    	<table class="table">
+            <tbody>
+              <tr>
+                <td>{{ stats_text_used_token }}</td>
+                <td class="text-right">{% if payplus_order_info.token_id > 0 %} <i class="fa fa-check-circle"></i> {% else %} <i class="fa fa-times-circle"></i> {% endif %}</td>
+              </tr><tr>
+                <td>{{ stats_total_operations }}</td>
+                <td class="text-right">{{ payplus_order_info.transactions|length }}</td>
+              </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</fieldset>
+
+<fieldset>
+	<legend>{{ text_payment_info }}</legend>
+	<div class="table-responsive">
+		<table class="table table-striped table-bordered">
+			<thead>
+				<tr>
+				<td class="text-left"><strong>{{ text_column_date_added }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_type }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_status }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_transaction_number }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_card_info }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_approval_number }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_voucher_number }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_installments }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_error_code }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_error_description }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_amount }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_currency }}</strong></td>
+				<td class="text-left"><strong>{{ text_column_options }}</strong></td>
+				</tr>
+			</thead>
+			<tbody>
+				{% for transaction in payplus_order_info.transactions %}
+					<tr>
+					<td class="text-left">{{ transaction.date_added }}</td>
+					<td class="text-left">{{ transaction.type|capitalize }}</td>
+					<td class="text-left">{{ transaction.status }}</td>
+					<td class="text-left">{{ transaction.info.number }}</td>
+					<td class="text-left">{% if transaction.info.four_digits %}{{ transaction.info.brand_name|capitalize }} ****-{{ transaction.info.four_digits }} ({{ transaction.info.expiry_month }}/{{ transaction.info.expiry_year }}){% endif %}</td>
+					<td class="text-left">{{ transaction.info.approval_num }}</td>
+					<td class="text-left">{{ transaction.info.voucher_num }}</td>
+					<td class="text-left">{{ transaction.info.number_of_payments }}</td>
+					<td class="text-left">{{ transaction.error_code }}</td>
+					<td class="text-left">{{ transaction.error_description }}</td>
+					<td class="text-left" style="color: {%if transaction.status == "Confirmed" and transaction.type == "charge" %}green {% elseif transaction.status == "Confirmed" and transaction.type == "refund" %}red{%else%}black{% endif %};">{{ transaction.amount }}</td>
+					<td class="text-left">{{ transaction.info.currency }}</td>
+					<td class="text-left refund_button">{% if transaction.type == "charge" and max_to_refund > 0 and transaction.status == "Confirmed" and transaction.is_full_refunded == 0 %}<a href="javascript:void(0);" onclick="refund_transaction('{{ transaction.payplus_transaction_uid }}','{{ transaction.amount }}');">Refund</a>{% endif %}</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</fieldset>
+
+<div class="row">
+{% if max_to_charge > 0 %}
+	<div class="col-sm-6">
+		<fieldset>
+			<legend>{{text_charge_payment}}</legend>
+			<form action="{{ charge_url }}" method="post" class="form-horizontal" onsubmit="return check_charge_validation();">
+				<div class="form-group">
+					<label class="col-sm-2 control-label">{{ text_charge_type }}</label>
+					<div class="col-sm-4">
+						<div class="checkbox">
+							<input type="radio" name="charge_type" class="charge_type" value="0" checked /> {{ text_partial_charge }} &nbsp; <input type="radio" id="charge_type" name="charge_type" class="charge_type" value="{{ max_to_charge }}" /> {{ text_full_charge }}
+						</div>
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label"><div class="checkbox">{{ text_charge_payment }}</div></label>
+					<div class="col-sm-4">
+						<div class="checkbox">
+							<input type="number" name="amount" min="0" step="0.01" id="charge_amount" max="{{ max_to_charge }}" value="0" class="form-control" /><br />
+							{{ available_charge }}: {{ max_to_charge }} {{ original_order_info.currency_code }}
+						</div>
+					</div>
+					<div class="col-sm-6">
+						<div class="checkbox">
+							<button id="button-history" data-loading-text="Loading..." class="btn btn-primary"><i class="fa fa-plus-circle"></i> {{ button_charge }}</button>
+						</div>
+					</div>
+				</div>
+			</form>
+		</fieldset>
+	</div>
+{% endif %}
+{% if max_to_refund > 0 %}
+	<div class="col-sm-6">
+		<fieldset class="refund_section">
+			<legend>{{text_refund_payment}}</legend>
+			<form action="{{ refund_url }}" method="post" class="form-horizontal" onsubmit="return check_refund_validation();">
+
+				<div class="form-group">
+					<label class="col-sm-2 control-label">{{ text_refund_type }}</label>
+					<div class="col-sm-4">
+						<div class="checkbox">
+							<input type="radio" name="refund_type" class="refund_type" value="0" checked /> {{ text_partial_refund }} &nbsp; <input type="radio" id="refund_type" name="refund_type" class="refund_type" value="{{ max_to_refund }}" /> {{ text_full_refund }}
+						</div>
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label"><div class="checkbox">{{ text_refund_payment }}</div></label>
+					<div class="col-sm-4">
+						<div class="checkbox">
+							<input type="hidden" id="transaction_uid" name="transaction_uid" value="" />
+							<input type="number" name="amount" step="0.01" id="refund_amount" min="0" max="{{ max_to_refund }}" value="0" class="form-control" /><br />
+							{{ available_refund }}: <span id="refund_amount_id">{{ max_to_refund }}</span> {{ original_order_info.currency_code }}
+						</div>
+					</div>
+					<div class="col-sm-6">
+						<div class="checkbox">
+							<button id="button-refund" data-loading-text="Loading..." class="btn btn-primary" disabled><i class="fa fa-plus-circle"></i> {{ button_refund }}</button>
+						</div>
+					</div>
+				</div>
+			</form>
+		</fieldset>
+	</div>
+{% endif %}
+</div>
+
+<div align="center">
+	<hr />
+	{{ text_extension_credit }}
+</div>
+
+<script type="text/javascript">
+$(".charge_type").change(function() {
+	$("#charge_amount").val(this.value);
+	if (this.value == "0") $("#charge_amount").prop( "readonly", false );
+		else $("#charge_amount").prop( "readonly", true );
+});
+$(".refund_type").change(function() {
+	$("#refund_amount").val(this.value);
+	if (this.value == "0") $("#refund_amount").prop( "readonly", false );
+		else $("#refund_amount").prop( "readonly", true );
+});
+function refund_transaction(uid,amount) {
+	if (!uid || amount <= 0) return false;
+	$("#transaction_uid").val(uid);
+	$("#refund_amount_id").html(amount);
+	$("#refund_amount").val(amount).attr('max',amount);
+	$("#refund_type").val(amount);
+	$("#button-refund").prop("disabled", false);
+}
+function check_charge_validation() {
+	if ($("#charge_amount").val() <= 0) {
+		alert('{{text_charge_error}}');
+		return false;
+		} else {
+		return true;
+		}
+}
+function check_refund_validation() {
+	if ($("#refund_amount").val() <= 0) {
+		alert('{{text_refund_error}}');
+		return false;
+		} else {
+		return true;
+		}
+}
+{% if tab_selected %}
+$(function() {
+	$('a[href="#tab-payplus"]').trigger('click');
+
+$('body, html').animate({
+      scrollTop: $("#payplus_gateway_top").offset().top
+    }, 600);
+	
+})
+{% endif %}
+
+$('.refund_button').click(function(event) {
+    $('body, html').animate({
+      scrollTop: $(".refund_section").offset().top
+    }, 600);
+
+  });
+
+</script>
+
+<style class="">
+.alert-alternative {
+	padding: 10px;
+    margin-bottom: 18px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+}
+</style>
